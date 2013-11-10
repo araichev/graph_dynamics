@@ -1,6 +1,6 @@
 r"""
-This Python 2.7 code implements several graph dynamics methods.
-More specifically, it provides functionality to iteratively change the 
+Python 2.7/Sage code for graph dynamics simulations.
+Provide functionality to iteratively change the 
 vertex colors of a given graph under various update rules.
 
 Sage graph objects are used throughout.
