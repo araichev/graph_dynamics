@@ -1,11 +1,11 @@
 r"""
-Python 2.7/Sage code for graph dynamics simulations.
+Python 2.7/Sage code for running graph dynamics simulations.
 Provide functionality to iteratively change the 
 vertex colors of a given graph under various update rules.
 
 Sage graph objects are used throughout.
 For more about Sage Graph objects, see the 
-``Sage graph theory documentation  <http://www.sagemath.org/doc/reference/sage/graphs/graph.html>``_.
+`Sage graph theory documentation  <http://www.sagemath.org/doc/reference/sage/graphs/graph.html>`_.
 
 In this code a *graph coloring* is an assignment of valid Sage color strings to the vertices of a graph.
 So it is not a graph coloring in the standard graph theoretic sense of the term (``<https://en.wikipedia.org/wiki/Graph_coloring>``_), that is, our colorings do not require adjacent vertices to have different colors.
@@ -17,6 +17,7 @@ CHANGELOG:
 - AR, 2013-03-15: Added gsl() and created Rule class to improve interface.
 - Mark C. Wilson (MCW), 2013-03-17: fixed GSL rule definition
 - AR, 2013-03-22: Simplified functions and data structure for colorings. Added color() function to make coloring a graph easier. Used Counter objects to streamline code.
+- AR, 2013-11-11: Simplified functions and cleaned up GSL rules.
 
 TODO:
 
@@ -53,26 +54,37 @@ def invert_dict(coloring):
         d[color].add(x)
     return d
     
-def color(graph, color_list=[], pad_randomly=[]):
+def color(graph, color_list=[]):
     r"""
-    Assign ``graph.vertices()`` the colors in ``color_list`` in order and 
-    return the resulting coloring.
-    If there are any vertices uncolored because ``color_list`` is too short,
-    then color each such vertex with one of the colors drawn uniformly at
-    random from the list of colors in ``pad_randomly``.
+    Return a coloring of the given graph based on the given color list by
+    assigning ``graph.vertices()`` the colors in ``color_list`` in order.
+    So the first vertex of the graph is assigned the first color in the color
+    list, the second vertex the second color, and so on.
     """
-    coloring = dict()
     k = len(color_list)
-    if k > 0:
-        # Color graph according to color_list
-        for i in range(k):
-            coloring[graph.vertices()[i]] = color_list[i]
-    if k < graph.num_verts() and pad_randomly:
-        # Color rest of graph according to pad_randomly.
-        num_colors = len(pad_randomly)
-        for x in graph.vertices()[k:]:
-            color = pad_randomly[randint(0, num_colors - 1)]
-            coloring[x] = color
+    n = graph.num_verts()
+    assert k == n,\
+      "The color list must be of length %s, the number of vertices in %s" % (n, graph)
+
+    coloring = dict()
+    for i in range(n):
+        coloring[graph.vertices()[i]] = color_list[i]
+    return coloring
+
+def color_randomly(graph, color_palette=[]):
+    r"""
+    Return a random coloring of the given graph based on the given color
+    palette.
+    Specifically, for each vertex in the graph, assign it one of the colors
+    in the color palette chosen uniformly at random.
+    """
+    k = len(color_palette)
+    assert k > 0,\
+      "The color palette must contain at least one color"
+
+    coloring = dict()
+    for v in graph.vertices():
+        coloring[v] = color_palette[randint(0, k - 1)]
     return coloring
 
 # Color update rules.
@@ -132,7 +144,7 @@ def gsl3(graph, coloring, color_palette=['green', 'red', 'yellow'],
     r"""
     Update the coloring of the given graph via the 
     Girard-Seligman-Liu (GSL) 3-color rule.
-    Assume ``color_palette`` has at least 3 colors,
+    Assume ``color_palette`` has exactly 3 different colors,
     which we will interpret as 
       green = ``color_palette[0]`` (for a proposition), 
       red = ``color_palette[1]`` (against a proposition), and
@@ -156,11 +168,14 @@ def gsl3(graph, coloring, color_palette=['green', 'red', 'yellow'],
     Otherwise, don't change x's color. 
     """ 
     G = graph
-    new_coloring = dict()
+    assert len(set(color_palette)) == 3,\
+      "color_palette must contain exactly 3 different colors"
+
     green = color_palette[0]
     red = color_palette[1]
     yellow = color_palette[2]
     # Update the colors of G's vertices.
+    new_coloring = dict()
     for x in G.vertices():
         nb_color_count = Counter() #{green: 0, red: 0, yellow: 0}
         for y in G.neighbors(x):
@@ -193,7 +208,7 @@ def gsl2(graph, coloring, color_palette=['green', 'yellow'],
     r"""
     Update the coloring of the given graph via the 
     Girard-Seligman-Liu (GSL) 2-color rule.
-    Assume ``color_palette`` has at least 2 colors,
+    Assume ``color_palette`` has exactly 2 colors,
     which we will interpret as 
       green = ``color_palette[0]`` (for a proposition) and
       yellow = ``color_palette[1]`` (undecided) 
@@ -208,6 +223,9 @@ def gsl2(graph, coloring, color_palette=['green', 'yellow'],
     Otherwise, don't change x's color. 
     """ 
     G = graph
+    assert len(set(color_palette)) == 2,\
+      "color_palette must contain exactly 2 different colors"
+
     new_coloring = dict()
     green = color_palette[0]
     yellow = color_palette[1]
@@ -260,15 +278,15 @@ class Rule(object):
         f = globals()[self.name]
         return f(graph, coloring, **self.kwargs)
     
-def iterate(graph, coloring, rule, num_steps=10):
+def iterate(graph, coloring, rule, nsteps=10):
     r"""
     Return the sequence  [c_0, c_1, ..., c_n] of colorings of the
     given graph, where c_0 = ``coloring``, c_{i+1} for i > 0 is ``rule(c_i)``, 
-    and n is the max of ``num_steps`` and the number of steps it takes for the 
+    and n is the max of ``nsteps`` and the number of steps it takes for the 
     colorings to stabilize.
     """
     result = [coloring]
-    for i in range(num_steps):
+    for i in range(nsteps):
         c_old = result[-1]
         c_new = rule(graph, c_old)
         if c_old == c_new:
