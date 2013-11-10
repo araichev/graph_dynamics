@@ -54,6 +54,13 @@ def invert_dict(coloring):
         d[color].add(x)
     return d
     
+def color_count(coloring):
+    r"""
+    Return a counter of the the colors in the given coloring.
+    """
+    from collections import Counter
+    return Counter(coloring.values())
+
 def color(graph, color_list=[]):
     r"""
     Return a coloring of the given graph based on the given color list by
@@ -180,8 +187,7 @@ def gsl3(graph, coloring, color_palette=['green', 'red', 'yellow'],
         nb_color_count = Counter() #{green: 0, red: 0, yellow: 0}
         for y in G.neighbors(x):
             color = coloring[y]
-            if color in {green, red, yellow}:
-                nb_color_count[color] += 1
+            nb_color_count[color] += 1
         num_neighbors = sum(nb_color_count.values())   
         x_color = coloring[x]
         # Check for strong influence. 
@@ -278,22 +284,26 @@ class Rule(object):
         f = globals()[self.name]
         return f(graph, coloring, **self.kwargs)
     
-def iterate(graph, coloring, rule, nsteps=10):
+def iterate(graph, coloring, rule, num_steps=10):
     r"""
-    Return the sequence  [c_0, c_1, ..., c_n] of colorings of the
+    Return the pair (stabilized, s), where s is the sequence  
+    [c_0, c_1, ..., c_n] of colorings of the
     given graph, where c_0 = ``coloring``, c_{i+1} for i > 0 is ``rule(c_i)``, 
-    and n is the max of ``nsteps`` and the number of steps it takes for the 
-    colorings to stabilize.
+    and n is the max of ``num_steps`` and the number of steps it takes for the 
+    colorings to stabilize, and where stabilized is ``True`` if the colorings
+    stabilized and is ``False`` otherwise.
     """
     result = [coloring]
-    for i in range(nsteps):
+    stabilized = False
+    for i in range(num_steps):
         c_old = result[-1]
         c_new = rule(graph, c_old)
         if c_old == c_new:
             # Stabilized
+            stabilized = True
             break
         result.append(c_new)
-    return result
+    return stabilized, result
 
 def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=3):
     r"""
@@ -308,3 +318,12 @@ def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=3):
         print "Step", i
         graph.show(pos=pos, vertex_colors=invert_dict(c), 
                vertex_labels=vertex_labels, figsize=figsize)
+
+def get_stats(graph, coloring, rule, num_steps=10, num_runs=100):
+    r"""
+    Run ``iterate(graph, coloring, rule, num_steps=num_steps)``
+    ``num_runs`` times and return 
+
+    1. The (sample) mean of the initial
+    """
+    pass

@@ -7,3 +7,5 @@ vertex colors of a given graph under various update rules.
 Sage graph objects are used throughout.
 For more about Sage Graph objects, see the 
 `Sage graph theory documentation  <http://www.sagemath.org/doc/reference/sage/graphs/graph.html>`_.
+
+See the Sage worksheet file (.sws) for usage examples. 
