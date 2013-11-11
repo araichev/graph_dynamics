@@ -16,13 +16,20 @@ CHANGELOG:
 - Alex Raichev (AR), 2013-03-02: Initial version.
 - AR, 2013-03-15: Added gsl() and created Rule class to improve interface.
 - Mark C. Wilson (MCW), 2013-03-17: fixed GSL rule definition
-- AR, 2013-03-22: Simplified functions and data structure for colorings. Added color() function to make coloring a graph easier. Used Counter objects to streamline code.
-- AR, 2013-11-11: Simplified functions and cleaned up GSL rules.
+- AR, 2013-03-22: Simplified functions and data structure for colorings. 
+  Added color() function to make coloring a graph easier. 
+  Used Counter objects to streamline code.
+- AR, 2013-11-11: Simplified functions and cleaned up GSL rules. 
+  Added get_stats().
 
 TODO:
 
 - Add input type, output type, examples, and tests to docstrings.
-- Implement methods that allow us to generate graphs and color them at the same time. E.g. attach a new node with probability proportional to the degree of existing nodes, and color it the same as that node with various probabilities, so that nodes of the same color are more likely to be neighbors.
+- Implement methods that allow us to generate graphs and color them at the
+  same time. E.g. attach a new node with probability proportional to the 
+  degree of existing nodes, and color it the same as that node with various 
+  probabilities, so that nodes of the same color are more likely to be 
+  neighbors.
 - Add unit tests (as a separate file).
 
 """
@@ -78,6 +85,7 @@ def color(graph, color_list=[]):
         coloring[graph.vertices()[i]] = color_list[i]
     return coloring
 
+# Coloring functions.
 def color_randomly(graph, color_palette=[]):
     r"""
     Return a random coloring of the given graph based on the given color
@@ -95,7 +103,7 @@ def color_randomly(graph, color_palette=[]):
     return coloring
 
 # Color update rules.
-def majority(graph, coloring):
+def majority_rule(graph, coloring):
     r"""
     Update the coloring of the given graph according to the majority rule.
     Under this rule, a vertex x becomes the color that occurs 
@@ -121,7 +129,7 @@ def majority(graph, coloring):
             new_coloring[x] = coloring[x]
     return new_coloring
 
-def plurality(graph, coloring):
+def plurality_rule(graph, coloring):
     r"""
     Update the coloring of the given graph via the plurality rule.
     Under this rule, a vertex x becomes the color that occurs most
@@ -146,7 +154,50 @@ def plurality(graph, coloring):
             new_coloring[x] = coloring[x]
     return new_coloring
 
-def gsl3(graph, coloring, color_palette=['green', 'red', 'yellow'],
+def gsl2_rule(graph, coloring, color_palette=['green', 'yellow'],
+         T=0.5):
+    r"""
+    Update the coloring of the given graph via the 
+    Girard-Seligman-Liu (GSL) 2-color rule.
+    Assume ``color_palette`` has exactly 2 colors,
+    which we will interpret as 
+      green = ``color_palette[0]`` (for a proposition) and
+      yellow = ``color_palette[1]`` (undecided) 
+    in the Girard-Seligman-Liu terminology.
+
+    NOTES:
+
+    The GSL2 rule is this.
+    For each vertex x in the graph, do the following.
+    If green makes up more than a fraction T of x's neighbors,
+    then color x green.
+    Otherwise, don't change x's color. 
+    """ 
+    G = graph
+    assert len(set(color_palette)) == 2,\
+      "color_palette must contain exactly 2 different colors"
+
+    new_coloring = dict()
+    green = color_palette[0]
+    yellow = color_palette[1]
+    # Update the colors of G's vertices.
+    for x in G.vertices():
+        nb_color_count = Counter() #{green: 0, yellow: 0}
+        for y in G.neighbors(x):
+            color = coloring[y]
+            if color in {green, yellow}:
+                nb_color_count[color] += 1
+        num_neighbors = sum(nb_color_count.values())   
+        x_color = coloring[x]
+        # Check for strong influence. 
+        if nb_color_count[green] > T*num_neighbors: 
+            new_coloring[x] = green 
+        # No influence. 
+        else:
+            new_coloring[x] = x_color
+    return new_coloring
+
+def gsl3_rule(graph, coloring, color_palette=['green', 'red', 'yellow'],
          T=0.5, t=0.25, s=0.25):
     r"""
     Update the coloring of the given graph via the 
@@ -208,102 +259,29 @@ def gsl3(graph, coloring, color_palette=['green', 'red', 'yellow'],
         else:
             new_coloring[x] = x_color
     return new_coloring
-
-def gsl2(graph, coloring, color_palette=['green', 'yellow'],
-         T=0.5):
+    
+def iterate(update_rule, update_rule_kwargs, graph, initial_coloring, 
+  num_steps=10):
     r"""
-    Update the coloring of the given graph via the 
-    Girard-Seligman-Liu (GSL) 2-color rule.
-    Assume ``color_palette`` has exactly 2 colors,
-    which we will interpret as 
-      green = ``color_palette[0]`` (for a proposition) and
-      yellow = ``color_palette[1]`` (undecided) 
-    in the Girard-Seligman-Liu terminology.
-
-    NOTES:
-
-    The GSL2 rule is this.
-    For each vertex x in the graph, do the following.
-    If green makes up more than a fraction T of x's neighbors,
-    then color x green.
-    Otherwise, don't change x's color. 
-    """ 
-    G = graph
-    assert len(set(color_palette)) == 2,\
-      "color_palette must contain exactly 2 different colors"
-
-    new_coloring = dict()
-    green = color_palette[0]
-    yellow = color_palette[1]
-    # Update the colors of G's vertices.
-    for x in G.vertices():
-        nb_color_count = Counter() #{green: 0, yellow: 0}
-        for y in G.neighbors(x):
-            color = coloring[y]
-            if color in {green, yellow}:
-                nb_color_count[color] += 1
-        num_neighbors = sum(nb_color_count.values())   
-        x_color = coloring[x]
-        # Check for strong influence. 
-        if nb_color_count[green] > T*num_neighbors: 
-            new_coloring[x] = green 
-        # No influence. 
-        else:
-            new_coloring[x] = x_color
-    return new_coloring
-
-RULES = ['majority', 'plurality', 'gsl3', 'gsl2']
-
-
-class Rule(object):
-    r"""
-    Wrapper for a graph update rule.
-    A callable (function-like) object.
-    
-    INSTANCE ATTRIBUTES:
-    
-    - ``name`` - The name (string) of an existing update rule. 
-    - ``kwargs`` - (Optional; default = {}) Keyword arguments (dictionary) 
-      needed for the update rule's definition.  For example, 
-      this could be {'T': 0.99, 's': 0.3, 't': 0.3} in case of the GSL3 rule.
-    """
-    def __init__(self, name, **kwargs):
-        if name not in RULES:
-            print 'Oops! Rule must be one of', RULES
-            return
-        self.name = name
-        self.kwargs = kwargs
-    
-    def __str__(self):
-        result = ['Rule:']
-        result.append('    name: ' + str(self.name))
-        result.append('    kwargs: ' + str(self.kwargs))
-        return "\n".join(result)   
-    
-    def __call__(self, graph, coloring):
-        f = globals()[self.name]
-        return f(graph, coloring, **self.kwargs)
-    
-def iterate(graph, coloring, rule, num_steps=10):
-    r"""
-    Return the pair (stabilized, s), where s is the sequence  
+    Return the pair (s, stabilized), where s is the sequence  
     [c_0, c_1, ..., c_n] of colorings of the
-    given graph, where c_0 = ``coloring``, c_{i+1} for i > 0 is ``rule(c_i)``, 
+    given graph, where c_0 = ``inital_coloring``, c_{i+1} for i > 0 is 
+    ``update_rule(graph, c_i, **update_rule_kwargs)``, 
     and n is the max of ``num_steps`` and the number of steps it takes for the 
     colorings to stabilize, and where stabilized is ``True`` if the colorings
-    stabilized and is ``False`` otherwise.
+    stabilized and ``False`` otherwise.
     """
-    result = [coloring]
+    s = [initial_coloring]
     stabilized = False
     for i in range(num_steps):
-        c_old = result[-1]
-        c_new = rule(graph, c_old)
+        c_old = s[-1]
+        c_new = update_rule(graph, c_old, **update_rule_kwargs)
         if c_old == c_new:
             # Stabilized
             stabilized = True
             break
-        result.append(c_new)
-    return stabilized, result
+        s.append(c_new)
+    return s, stabilized
 
 def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=3):
     r"""
@@ -319,11 +297,56 @@ def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=3):
         graph.show(pos=pos, vertex_colors=invert_dict(c), 
                vertex_labels=vertex_labels, figsize=figsize)
 
-def get_stats(graph, coloring, rule, num_steps=10, num_runs=100):
+def get_stats(update_rule, update_rule_kwargs, 
+  graph_generator, graph_generator_kwargs,
+  coloring_function, coloring_function_kwargs, 
+  num_steps=10, num_runs=1000):
     r"""
-    Run ``iterate(graph, coloring, rule, num_steps=num_steps)``
-    ``num_runs`` times and return 
+    For i in ``range(num_runs)``, run 
+    ``iterate(update_rule, update_rule_kwargs, G_i, c_i, 
+    num_steps=num_steps)``,
+    where G_i is the graph generated by 
+    ``graph_generator(**graph_generator_kwargs)`` on the ith run, and c_i is
+    the initial coloring generated by 
+    ``coloring_function(G_i, **coloring_function_kwargs)`` on the ith run.
 
-    1. The (sample) mean of the initial
+    For each run that stabilizes, save the initial and final colorings.
+    After all runs calculate and return the following stats below in order:
+
+    - The number of runs that stabilized within ``num_steps`` steps
+    - The (sample) mean number of steps required to stabilize over all runs 
+    that stabilized
+    - The mean color counts of the initial colorings over all runs
+    that stabilized
+    - The mean color counts of the final colorings over all runs
+    that stabilized
     """
-    pass
+    from collections import Counter 
+
+    ur = update_rule
+    urk = update_rule_kwargs
+    gg = graph_generator
+    ggk = graph_generator_kwargs
+    cf = coloring_function
+    cfk = coloring_function_kwargs
+    step_counts = []
+    initial_color_counts = []
+    final_color_counts = []
+    for i in range(num_runs):
+        G = gg(**ggk)
+        ic = cf(G, **cfk)
+        s, stabilized = iterate(ur, urk, G, ic)
+        if stabilized:
+            initial_color_counts.append(color_count(s[0]))
+            final_color_counts.append(color_count(s[-1]))
+            step_counts.append(len(s))
+
+    N = len(step_counts)
+    if not N:
+        return N, None, None, None
+    return (
+      N,
+      sum(step_counts)/N,
+      Counter({color: sum(c[color] for c in initial_color_counts)/N for color in color_palette}),
+      Counter({color: sum(c[color] for c in final_color_counts)/N for color in color_palette})
+    )
