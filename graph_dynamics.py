@@ -177,6 +177,8 @@ def gsl2_rule(graph, coloring, color_palette=['green', 'yellow'],
     G = graph
     assert len(set(color_palette)) == 2,\
       "color_palette must contain exactly 2 different colors"
+    assert 0 <= T <= 1,\
+      "Need 0 <= T <= 1"
 
     new_coloring = dict()
     green = color_palette[0]
@@ -229,6 +231,10 @@ def gsl3_rule(graph, coloring, color_palette=['green', 'red', 'yellow'],
     G = graph
     assert len(set(color_palette)) == 3,\
       "color_palette must contain exactly 3 different colors"
+    assert 0 <= T <= 1,\
+      "Need 0 <= T <= 1"
+    assert s + t <= T,\
+      "Need s + t <= T"
 
     green = color_palette[0]
     red = color_palette[1]
