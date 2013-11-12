@@ -40,6 +40,7 @@ TODO:
 #                  http://www.gnu.org/licenses/
 #*****************************************************************************
 
+from __future__ import division, print_function
 from random import randint
 from collections import Counter
         
@@ -293,14 +294,14 @@ def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=3):
     if pos is None:
         pos = graph.layout()
     for (i, c) in enumerate(colorings):
-        print "Step", i
+        print("Step", i)
         graph.show(pos=pos, vertex_colors=invert_dict(c), 
                vertex_labels=vertex_labels, figsize=figsize)
 
 def get_stats(update_rule, update_rule_kwargs, 
   graph_generator, graph_generator_kwargs,
   coloring_function, coloring_function_kwargs, 
-  num_steps=10, num_runs=1000):
+  num_steps=10, num_runs=1000, print_stats=True):
     r"""
     For i in ``range(num_runs)``, run 
     ``iterate(update_rule, update_rule_kwargs, G_i, c_i, 
@@ -320,6 +321,8 @@ def get_stats(update_rule, update_rule_kwargs,
     that stabilized
     - The mean color counts of the final colorings over all runs
     that stabilized
+
+    If ``print_stats == True``, then pretty print the stats as well.
     """
     from collections import Counter 
 
@@ -344,9 +347,33 @@ def get_stats(update_rule, update_rule_kwargs,
     N = len(step_counts)
     if not N:
         return N, None, None, None
+    mean_steps = sum(step_counts)/N
+    mean_initial_color_count = Counter({color: sum(c[color] 
+      for c in initial_color_counts)/N for color in color_palette}) 
+
+    mean_final_color_count =  Counter({color: sum(c[color] 
+      for c in final_color_counts)/N for color in color_palette})
+
+    if print_stats:
+        # Print stats and round to 3 significant figures
+        print(ur)
+        print(gg)
+        print(cf)
+        print('-'*20)
+        print('Number of runs: {!s}'.format(num_runs))
+        print('Number of runs that stabilized: {!s}'.format(N))
+        print('Mean number of steps required to stabilize: {:.3g}'.format(
+          mean_steps))
+        print('Mean initial color counts:')
+        for color, mean in sorted(mean_initial_color_count.items()):
+            print('    {!s}: {:.3g}'.format(color, mean))
+        print('Mean finial color counts:')
+        for color, mean in sorted(mean_final_color_count.items()):
+            print('    {!s}: {:.3g}'.format(color, mean))
+        
     return (
       N,
-      sum(step_counts)/N,
-      Counter({color: sum(c[color] for c in initial_color_counts)/N for color in color_palette}),
-      Counter({color: sum(c[color] for c in final_color_counts)/N for color in color_palette})
+      mean_steps,
+      mean_initial_color_count,
+      mean_final_color_count,
     )
