@@ -231,8 +231,8 @@ def gsl3_rule(graph, coloring, color_palette=['green', 'red', 'yellow'],
     G = graph
     assert len(set(color_palette)) == 3,\
       "color_palette must contain exactly 3 different colors"
-    assert 0 <= T <= 1,\
-      "Need 0 <= T <= 1"
+    assert 0 <= T <= 1 and 0 <= s <= 1 and 0 <= t <= 1,\
+      "Need 0 <= T <= 1 and 0 <= s <= 1 and 0 <= t <= 1"
     assert s + t <= T,\
       "Need s + t <= T"
 
