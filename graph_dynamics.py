@@ -1,12 +1,4 @@
 r"""
-Python 2.7/Sage code for running graph dynamics simulations.
-Provide functionality to iteratively change the 
-vertex colors of a given graph under various update rules.
-
-Sage graph objects are used throughout.
-For more about Sage Graph objects, see the 
-`Sage graph theory documentation  <http://www.sagemath.org/doc/reference/sage/graphs/graph.html>`_.
-
 In this code a *graph coloring* is an assignment of valid Sage color strings
 to the vertices of a graph.
 So it is not a graph coloring in the standard graph theoretic sense of the 
@@ -24,7 +16,9 @@ CHANGELOG:
   Added color() function to make coloring a graph easier. 
   Used Counter objects to streamline code.
 - AR, 2013-11-11: Simplified functions and cleaned up GSL rules. 
-  Added run_rule_many_times().
+  Added ``run_rule_many_times()``.
+- AR, 2013-11-18: Renamed functions and improved ``color_randomly()`` 
+  to handle biases.
 
 TODO:
 

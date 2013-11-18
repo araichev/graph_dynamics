@@ -1,8 +1,8 @@
 graph_dynamics
 ==============
-Python 2.7/Sage code for running graph dynamics simulations.
-Provides functionality to iteratively change the 
-vertex colors of a given graph under various update rules.
+Python 2.7/Sage code for running graph dynamics experiments.
+This code provides functionality to update the vertex colors of a given graph 
+under various update rules.
 
 Sage graph objects are used throughout.
 For more about Sage Graph objects, see the 
