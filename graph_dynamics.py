@@ -7,9 +7,13 @@ Sage graph objects are used throughout.
 For more about Sage Graph objects, see the 
 `Sage graph theory documentation  <http://www.sagemath.org/doc/reference/sage/graphs/graph.html>`_.
 
-In this code a *graph coloring* is an assignment of valid Sage color strings to the vertices of a graph.
-So it is not a graph coloring in the standard graph theoretic sense of the term (``<https://en.wikipedia.org/wiki/Graph_coloring>``_), that is, our colorings do not require adjacent vertices to have different colors.
-If you can think of a direct and less confusing term for us to use, please let us know.
+In this code a *graph coloring* is an assignment of valid Sage color strings
+to the vertices of a graph.
+So it is not a graph coloring in the standard graph theoretic sense of the 
+term (``<https://en.wikipedia.org/wiki/Graph_coloring>``_), that is, 
+our colorings do not require adjacent vertices to have different colors.
+If you can think of a direct and less confusing term for us to use, 
+please let us know.
 
 CHANGELOG:
 
@@ -20,7 +24,7 @@ CHANGELOG:
   Added color() function to make coloring a graph easier. 
   Used Counter objects to streamline code.
 - AR, 2013-11-11: Simplified functions and cleaned up GSL rules. 
-  Added get_stats().
+  Added run_rule_many_times().
 
 TODO:
 
@@ -41,11 +45,13 @@ TODO:
 #*****************************************************************************
 
 from __future__ import division, print_function
-from random import randint
 from collections import Counter
         
 r"""
-Store a graph coloring as a dictionary, where the keys are the vertices of the graph (Sage Graph object), and the corresponding values are valid Sage color specifiers (such as 'green' or (0.2, 0.8, 0.1)) indicating the colors of the vertices.
+Store a graph coloring as a dictionary, where the keys are the vertices of the
+graph (Sage Graph object), and the corresponding values are valid Sage color 
+specifiers (such as 'green' or (0.2, 0.8, 0.1)) indicating the colors of 
+the vertices.
 """
         
 def invert_dict(coloring):
@@ -66,7 +72,6 @@ def color_count(coloring):
     r"""
     Return a counter of the the colors in the given coloring.
     """
-    from collections import Counter
     return Counter(coloring.values())
 
 def color(graph, color_list=[]):
@@ -87,20 +92,36 @@ def color(graph, color_list=[]):
     return coloring
 
 # Coloring functions.
-def color_randomly(graph, color_palette=[]):
+def color_randomly(graph, bias):
     r"""
     Return a random coloring of the given graph based on the given color
-    palette.
-    Specifically, for each vertex in the graph, assign it one of the colors
-    in the color palette chosen uniformly at random.
+    bias.
+    For example, if ``bias = {'green': 0.4, 'red': 0.5, 'yellow': 0.1}``,
+    then for each vertex v in the graph, v would be assigned the color 'green' 
+    with a probability of 0.4, 'red' with a probability of 0.5, and 'yellow'
+    with a probability of 0.1.
+    Assume the individual probabilities sum to 1.
     """
-    k = len(color_palette)
-    assert k > 0,\
-      "The color palette must contain at least one color"
+    from random import uniform
+
+    assert sum(bias.values()) == 1,\
+      "The biases must sum to 1"
+
+    # Partition the unit interval into ranges of color determined by bias
+    cutoffs = list()  # (number, color)
+    cut = 0
+    for color, p in bias.items():
+        cut += p
+        cutoffs.append((cut, color))
 
     coloring = dict()
     for v in graph.vertices():
-        coloring[v] = color_palette[randint(0, k - 1)]
+        x = uniform(0, 1)
+        for cut, color in cutoffs:
+            if x <= cut:
+                color_choice = color
+                break
+        coloring[v] = color_choice
     return coloring
 
 # Color update rules.
@@ -155,15 +176,15 @@ def plurality_rule(graph, coloring):
             new_coloring[x] = coloring[x]
     return new_coloring
 
-def gsl2_rule(graph, coloring, color_palette=['green', 'yellow'],
+def gsl2_rule(graph, coloring, palette=['green', 'yellow'],
          T=0.5):
     r"""
     Update the coloring of the given graph via the 
     Girard-Seligman-Liu (GSL) 2-color rule.
-    Assume ``color_palette`` has exactly 2 colors,
+    Assume ``palette`` has exactly 2 colors,
     which we will interpret as 
-      green = ``color_palette[0]`` (for a proposition) and
-      yellow = ``color_palette[1]`` (undecided) 
+      green = ``palette[0]`` (for a proposition) and
+      yellow = ``palette[1]`` (undecided) 
     in the Girard-Seligman-Liu terminology.
 
     NOTES:
@@ -175,14 +196,14 @@ def gsl2_rule(graph, coloring, color_palette=['green', 'yellow'],
     Otherwise, don't change x's color. 
     """ 
     G = graph
-    assert len(set(color_palette)) == 2,\
-      "color_palette must contain exactly 2 different colors"
+    assert len(set(palette)) == 2,\
+      "palette must contain exactly 2 different colors"
     assert 0 <= T <= 1,\
       "Need 0 <= T <= 1"
 
     new_coloring = dict()
-    green = color_palette[0]
-    yellow = color_palette[1]
+    green = palette[0]
+    yellow = palette[1]
     # Update the colors of G's vertices.
     for x in G.vertices():
         nb_color_count = Counter() #{green: 0, yellow: 0}
@@ -200,16 +221,16 @@ def gsl2_rule(graph, coloring, color_palette=['green', 'yellow'],
             new_coloring[x] = x_color
     return new_coloring
 
-def gsl3_rule(graph, coloring, color_palette=['green', 'red', 'yellow'],
+def gsl3_rule(graph, coloring, palette=['green', 'red', 'yellow'],
          T=0.5, t=0.25, s=0.25):
     r"""
     Update the coloring of the given graph via the 
     Girard-Seligman-Liu (GSL) 3-color rule.
-    Assume ``color_palette`` has exactly 3 different colors,
+    Assume ``palette`` has exactly 3 different colors,
     which we will interpret as 
-      green = ``color_palette[0]`` (for a proposition), 
-      red = ``color_palette[1]`` (against a proposition), and
-      yellow = ``color_palette[2]`` (undecided) 
+      green = ``palette[0]`` (for a proposition), 
+      red = ``palette[1]`` (against a proposition), and
+      yellow = ``palette[2]`` (undecided) 
     in the Girard-Seligman-Liu terminology.
     Assume the following relations hold for the given parameters: 
     ``T >= 0.5`` and ``s + t <= T``.
@@ -229,16 +250,16 @@ def gsl3_rule(graph, coloring, color_palette=['green', 'red', 'yellow'],
     Otherwise, don't change x's color. 
     """ 
     G = graph
-    assert len(set(color_palette)) == 3,\
-      "color_palette must contain exactly 3 different colors"
+    assert len(set(palette)) == 3,\
+      "palette must contain exactly 3 different colors"
     assert 0 <= T <= 1 and 0 <= s <= 1 and 0 <= t <= 1,\
       "Need 0 <= T <= 1 and 0 <= s <= 1 and 0 <= t <= 1"
     assert s + t <= T,\
       "Need s + t <= T"
 
-    green = color_palette[0]
-    red = color_palette[1]
-    yellow = color_palette[2]
+    green = palette[0]
+    red = palette[1]
+    yellow = palette[2]
     # Update the colors of G's vertices.
     new_coloring = dict()
     for x in G.vertices():
@@ -267,7 +288,21 @@ def gsl3_rule(graph, coloring, color_palette=['green', 'red', 'yellow'],
             new_coloring[x] = x_color
     return new_coloring
     
-def iterate(update_rule, update_rule_kwargs, graph, initial_coloring, 
+def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=3):
+    r"""
+    Draw all the colorings of the given graph that are listed in ``colorings``.
+    Position the vertices according to the coordinates in ``pos``.
+    Label the vertices iff ``vertex_labels== True``.
+    Set the size of each graph via ``figsize``.   
+    """
+    if pos is None:
+        pos = graph.layout()
+    for (i, c) in enumerate(colorings):
+        print("Step", i)
+        graph.show(pos=pos, vertex_colors=invert_dict(c), 
+               vertex_labels=vertex_labels, figsize=figsize)
+
+def run_rule(update_rule, update_rule_kwargs, graph, initial_coloring, 
   num_steps=10):
     r"""
     Return the pair (s, stabilized), where s is the sequence  
@@ -290,27 +325,13 @@ def iterate(update_rule, update_rule_kwargs, graph, initial_coloring,
         s.append(c_new)
     return s, stabilized
 
-def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=3):
-    r"""
-    Draw all the colorings of the given graph that are listed in ``colorings``.
-    Position the vertices according to the coordinates in ``pos``.
-    Label the vertices iff ``vertex_labels== True``.
-    Set the size of each graph via ``figsize``.   
-    """
-    if pos is None:
-        pos = graph.layout()
-    for (i, c) in enumerate(colorings):
-        print("Step", i)
-        graph.show(pos=pos, vertex_colors=invert_dict(c), 
-               vertex_labels=vertex_labels, figsize=figsize)
-
-def get_stats(update_rule, update_rule_kwargs, 
+def run_rule_many_times(update_rule, update_rule_kwargs, 
   graph_generator, graph_generator_kwargs,
   coloring_function, coloring_function_kwargs, 
   num_steps=10, num_runs=1000, print_stats=True):
     r"""
     For i in ``range(num_runs)``, run 
-    ``iterate(update_rule, update_rule_kwargs, G_i, c_i, 
+    ``run_rule(update_rule, update_rule_kwargs, G_i, c_i, 
     num_steps=num_steps)``,
     where G_i is the graph generated by 
     ``graph_generator(**graph_generator_kwargs)`` on the ith run, and c_i is
@@ -344,21 +365,21 @@ def get_stats(update_rule, update_rule_kwargs,
     for i in range(num_runs):
         G = gg(**ggk)
         ic = cf(G, **cfk)
-        s, stabilized = iterate(ur, urk, G, ic)
+        s, stabilized = run_rule(ur, urk, G, ic)
         if stabilized:
             initial_color_counts.append(color_count(s[0]))
             final_color_counts.append(color_count(s[-1]))
             step_counts.append(len(s))
 
+    palette = urk['palette']
     N = len(step_counts)
     if not N:
         return N, None, None, None
     mean_steps = sum(step_counts)/N
     mean_initial_color_count = Counter({color: sum(c[color] 
-      for c in initial_color_counts)/N for color in color_palette}) 
-
+      for c in initial_color_counts)/N for color in palette}) 
     mean_final_color_count =  Counter({color: sum(c[color] 
-      for c in final_color_counts)/N for color in color_palette})
+      for c in final_color_counts)/N for color in palette})
 
     if print_stats:
         # Print stats and round to 3 significant figures
