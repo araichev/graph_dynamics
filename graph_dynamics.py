@@ -1,5 +1,6 @@
 r"""
-In this code a *graph coloring* is an assignment of valid Sage color strings
+Python 2.7/Sage code.
+Herein a *graph coloring* is an assignment of valid Sage color strings
 to the vertices of a graph.
 So it is not a graph coloring in the standard graph theoretic sense of the 
 term (``<https://en.wikipedia.org/wiki/Graph_coloring>``_), that is, 
@@ -19,6 +20,8 @@ CHANGELOG:
   Added ``run_rule_many_times()``.
 - AR, 2013-11-18: Renamed functions and improved ``color_randomly()`` 
   to handle biases.
+- AR, 2013-11-25: Added Maslov-Sneppen rewiring and the Moore lattice
+  graph generator. 
 
 TODO:
 
@@ -85,7 +88,7 @@ def color(graph, color_list=[]):
         coloring[graph.vertices()[i]] = color_list[i]
     return coloring
 
-# Coloring functions.
+# Coloring functions ---------------------------------------------------------
 def color_randomly(graph, bias):
     r"""
     Return a random coloring of the given graph based on the given color
@@ -118,7 +121,7 @@ def color_randomly(graph, bias):
         coloring[v] = color_choice
     return coloring
 
-# Color update rules.
+# Color update rules ---------------------------------------------------------
 def majority_rule(graph, coloring):
     r"""
     Update the coloring of the given graph according to the majority rule.
@@ -282,7 +285,86 @@ def gsl3_rule(graph, coloring, palette=['green', 'red', 'yellow'],
             new_coloring[x] = x_color
     return new_coloring
     
-def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=3):
+# Custom graph generators ----------------------------------------------------
+def moore_lattice(r, c, toroidal=False):
+    r"""
+    Return a graph whose with ``r*c`` vertices that form an ``r`` x ``c`` 
+    2D square lattice graph, where each vertex 
+    is connected to its 8 closest neighbors, its `Moore neighborhood <https://en.wikipedia.org/wiki/Moore_neighborhood>`_.
+
+    If ``toroidal == True``, then add edges to connect the top row
+    vertices with the bottom row vertices and the left column vertices
+    with the right column vertices to produce a graph that has no boundary
+    and can be embedded on a torus.
+    """
+    G = Graph()
+    G.add_vertex((0, 0))
+    G.add_edges([((0, j), (0, j + 1)) for j in range(c - 1)])
+    G.add_edges([((i, 0), (i + 1, 0)) for i in range(r - 1)])
+    for i in range(r - 1): 
+        for j in range(c - 1):
+            G.add_edges([
+              ((i, j), (i, j + 1)),
+              ((i, j), (i + 1, j)),
+              ((i, j), (i + 1, j + 1)),
+              ((i + 1, j), (i, j + 1)),
+              ((i + 1, j), (i + 1, j + 1)), 
+              ((i, j + 1), (i + 1, j + 1))              
+              ])
+    G.set_pos({v: (v[1], -v[0]) for v in G.vertices()})
+    if toroidal:
+        # Connect first and last rows
+        for j in range(c):
+            G.add_edges([
+              ((0, j), (r - 1, j)),
+              ((0, j), (r - 1, (j + 1) % c)),
+              ((0, (j + 1) % c ), (r - 1, j)),
+              ])
+        # Connect first and last columns
+        for i in range(r):
+            G.add_edges([
+              ((i, 0), (i, c - 1)),
+              ((i, 0), ((i + 1) % r , c - 1)),
+              (((i + 1) % r , 0), (i, c - 1)),
+              ])
+    return G
+
+def triangular_lattice(r, c, toroidal=False):
+    pass
+
+def maslov_sneppen(graph, num_steps=None):
+    r"""
+    Rewire the given undirected or directed graph according to the Maslov and 
+    Sneppen method for degree-preserving random rewiring of a complex network, 
+    as described on 
+    `Maslov's webpage <http://www.cmth.bnl.gov/~maslov/matlab.htm>`_.
+    Return the resulting graph.
+
+    If a positive integer ``num_steps`` is given, then perform ``num_steps``
+    of the method.
+    Otherwise perform the default number of steps of the method, namely
+    ``4*graph.num_edges()`` steps.
+    """
+    G = graph
+    if num_steps is None:
+        num_steps = 4*graph.num_edges()
+    for i in range(num_steps):
+        e1 = G.random_edge() 
+        e2 = G.random_edge()
+        new_e1 = (e1[0], e2[1])
+        new_e2 = (e2[0], e1[1])
+        if new_e1[0] == new_e1[1] or new_e2[0] == new_e2[1] or\
+          G.has_edge(new_e1) or G.has_edge(new_e2):
+            # Not allowed to rewire e1 and e2. Skip.
+            continue
+        G.delete_edge(e1)
+        G.delete_edge(e2)
+        G.add_edge(new_e1)
+        G.add_edge(new_e2)
+    return G
+
+# Dynamics functions --------------------------------------------------------- 
+def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=2):
     r"""
     Draw all the colorings of the given graph that are listed in ``colorings``.
     Position the vertices according to the coordinates in ``pos``.
