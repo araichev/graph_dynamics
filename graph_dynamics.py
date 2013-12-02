@@ -288,49 +288,123 @@ def gsl3_rule(graph, coloring, palette=['green', 'red', 'yellow'],
 # Custom graph generators ----------------------------------------------------
 def moore_lattice(r, c, toroidal=False):
     r"""
-    Return a graph whose with ``r*c`` vertices that form an ``r`` x ``c`` 
+    Return a graph with ``r*c`` vertices that form an ``r`` x ``c`` 
     2D square lattice graph, where each vertex 
     is connected to its 8 closest neighbors, its `Moore neighborhood <https://en.wikipedia.org/wiki/Moore_neighborhood>`_.
+    Assume ``r >= 2 and c >= 2``.
 
     If ``toroidal == True``, then add edges to connect the top row
     vertices with the bottom row vertices and the left column vertices
     with the right column vertices to produce a graph that has no boundary
     and can be embedded on a torus.
+    In this case, each vertex has 8 neighbors.
     """
+    assert r >= 2 and c >= 2,\
+      'Need r >= 2 and c >= 2'
     G = Graph()
-    G.add_vertex((0, 0))
-    G.add_edges([((0, j), (0, j + 1)) for j in range(c - 1)])
-    G.add_edges([((i, 0), (i + 1, 0)) for i in range(r - 1)])
-    for i in range(r - 1): 
-        for j in range(c - 1):
-            G.add_edges([
-              ((i, j), (i, j + 1)),
-              ((i, j), (i + 1, j)),
-              ((i, j), (i + 1, j + 1)),
-              ((i + 1, j), (i, j + 1)),
-              ((i + 1, j), (i + 1, j + 1)), 
-              ((i, j + 1), (i + 1, j + 1))              
-              ])
-    G.set_pos({v: (v[1], -v[0]) for v in G.vertices()})
-    if toroidal:
-        # Connect first and last rows
+    for i in range(r):
         for j in range(c):
-            G.add_edges([
-              ((0, j), (r - 1, j)),
-              ((0, j), (r - 1, (j + 1) % c)),
-              ((0, (j + 1) % c ), (r - 1, j)),
-              ])
-        # Connect first and last columns
-        for i in range(r):
-            G.add_edges([
-              ((i, 0), (i, c - 1)),
-              ((i, 0), ((i + 1) % r , c - 1)),
-              (((i + 1) % r , 0), (i, c - 1)),
-              ])
+            # Define generic neighbors of vertex (i, j)     
+            v = i, j  
+            east = i, (j + 1) % c
+            northeast = (i - 1) % r, (j + 1) % c
+            north = (i - 1) % r, j
+            northwest = (i - 1) % r, (j - 1) % c
+            west = i, (j - 1) % c
+            southwest = (i + 1) % r, (j - 1) % c
+            south = (i + 1) % r, j
+            southeast = (i + 1) % r, (j + 1) % c 
+            if not toroidal:
+                # Delete boundary case edges
+                if i == 0:
+                    northeast = None
+                    north = None
+                    northwest = None
+                if i == r - 1:
+                    southwest = None
+                    south = None
+                    southeast = None
+                if j == 0:
+                    northwest = None
+                    west = None
+                    southwest = None
+                if j == c - 1:
+                    east = None
+                    northeast = None
+                    southeast = None
+            neighbors = [east, northeast, north, northwest, west, 
+              southwest, south, southeast]
+            edges = [(v, x) for x in neighbors if x is not None]
+            G.add_edges(edges)
+    G.set_pos({v: (v[1], -v[0]) for v in G.vertices()})
     return G
 
-def triangular_lattice(r, c, toroidal=False):
-    pass
+def hex_lattice(r, c, toroidal=False):
+    r"""
+    Return a graph with ``r*c - math.ceil(r/2)`` vertices that are arranged
+    in a 2D hexangonal lattice pattern, where the even-numbered rows, 
+    starting with row 0, have ``c - 1`` vertices and the odd-numbered rows
+    have ``c`` vertices.
+    Assume ``r >= 2 and c >= 2 and r % 2 == 0``.
+
+    If ``toroidal == True``, then add edges to connect the top row
+    vertices with the bottom row vertices and the left column vertices
+    with the right column vertices to produce a graph that has no boundary
+    and can be embedded on a torus.
+    In this case, each vertex has 6 neighbors.
+    """
+    assert r >= 2 and c >= 2 and r % 2 == 0,\
+      'Need r >= 3 and c >= 2 and r % 2 == 0'
+    G = Graph()
+    for i in range(r):
+        for j in range(c):
+            if (i % 2) == 0 and j == c - 1:
+                # No vertex at (i, j)
+                continue    
+            # Define generic neighbors of vertex (i, j)      
+            v = i, j     
+            cc = c - 1
+            if (i % 2) == 0:
+                east = i, (j + 1) % cc
+                northeast = (i - 1) % r, (j + 1) % c
+                northwest = (i - 1) % r, j
+                west = i, (j - 1) % cc
+                southwest = (i + 1) % r, j  
+                southeast = (i + 1) % r, (j + 1) % c
+            else:
+                east = i, (j + 1) % c
+                northeast = (i - 1) % r, j % cc
+                northwest = (i - 1) % r, (j - 1) % cc
+                west = i, (j - 1) % c
+                southwest = (i + 1) % r, (j - 1) % cc 
+                southeast = (i + 1) % r, j % cc
+            if not toroidal:
+                # Delete boundary case edges
+                if i == 0:
+                    # Top edge
+                    northeast = None
+                    northwest = None
+                if i == r - 1:
+                    # Bottom edge
+                    southeast = None
+                    southwest = None
+                if j == 0:
+                    # Left edge
+                    northwest = None
+                    west = None
+                    southwest = None
+                if ((i % 2) == 0 and j == c - 2) or \
+                  ((i % 2) == 1 and j == c - 1): 
+                    # Right edge
+                    east = None
+                    northeast = None
+                    southeast = None
+            neighbors = [east, northeast, northwest, 
+              west, southwest, southeast]
+            edges = [(v, x) for x in neighbors if x is not None]
+            G.add_edges(edges)
+    G.set_pos({v: (v[1], -v[0]) for v in G.vertices()})
+    return G
 
 def maslov_sneppen(graph, num_steps=None):
     r"""
