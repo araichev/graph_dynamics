@@ -124,8 +124,8 @@ def color_randomly(graph, bias):
 # Color update rules ---------------------------------------------------------
 def majority_rule(graph, coloring):
     r"""
-    Update the coloring of the given graph according to the majority rule.
-    Under this rule, a vertex x becomes the color that occurs 
+    Update the coloring of the given graph acording to the majority rule.
+    Under this rule, a vertex x becomes the color that ocurs 
     in the majority (> 0.5) of its neighbors.
     If a majority color does not exist, then x does not change color.
     """
@@ -151,7 +151,7 @@ def majority_rule(graph, coloring):
 def plurality_rule(graph, coloring):
     r"""
     Update the coloring of the given graph via the plurality rule.
-    Under this rule, a vertex x becomes the color that occurs most
+    Under this rule, a vertex x becomes the color that ocurs most
     among its neighbors.
     If the maximum color frequency is 1, then x does not change color.
     """
@@ -339,45 +339,42 @@ def moore_lattice(r, c, toroidal=False):
     G.set_pos({v: (v[1], -v[0]) for v in G.vertices()})
     return G
 
-def hex_lattice(r, c, toroidal=False):
+def triangular_lattice(r, c, toroidal=False):
     r"""
-    Return a graph with ``r*c - math.ceil(r/2)`` vertices that are arranged
-    in a 2D hexangonal lattice pattern, where the even-numbered rows, 
-    starting with row 0, have ``c - 1`` vertices and the odd-numbered rows
-    have ``c`` vertices.
-    Assume ``r >= 2 and c >= 2 and r % 2 == 0``.
+    Return a graph with ``r*c`` vertices that are arranged
+    in a 2D triangular lattice pattern with ``r`` rows of ``c`` vertices each.
+    Assume ``r >= 2 and c >= 2``.
 
-    If ``toroidal == True``, then add edges to connect the top row
-    vertices with the bottom row vertices and the left column vertices
-    with the right column vertices to produce a graph that has no boundary
-    and can be embedded on a torus.
+    If ``toroidal == True and r % 2 == 0``, then add edges to connect the 
+    top row of vertices with the bottom row vertices and the left column
+    of vertices with the right column vertices to produce a graph that has 
+    no boundary and can be embedded on a torus.
     In this case, each vertex has 6 neighbors.
     """
-    assert r >= 2 and c >= 2 and r % 2 == 0,\
-      'Need r >= 3 and c >= 2 and r % 2 == 0'
+    assert r >= 2 and c >= 2,\
+      'Need r >= 2 and c >= 2'
+    if toroidal:
+        assert r % 2 == 0,\
+          'Need r to be even in the toroidal case'  
     G = Graph()
     for i in range(r):
         for j in range(c):
-            if (i % 2) == 0 and j == c - 1:
-                # No vertex at (i, j)
-                continue    
             # Define generic neighbors of vertex (i, j)      
             v = i, j     
-            cc = c - 1
             if (i % 2) == 0:
-                east = i, (j + 1) % cc
+                east = i, (j + 1) % c
                 northeast = (i - 1) % r, (j + 1) % c
                 northwest = (i - 1) % r, j
-                west = i, (j - 1) % cc
+                west = i, (j - 1) % c
                 southwest = (i + 1) % r, j  
                 southeast = (i + 1) % r, (j + 1) % c
             else:
                 east = i, (j + 1) % c
-                northeast = (i - 1) % r, j % cc
-                northwest = (i - 1) % r, (j - 1) % cc
+                northeast = (i - 1) % r, j % c
+                northwest = (i - 1) % r, (j - 1) % c
                 west = i, (j - 1) % c
-                southwest = (i + 1) % r, (j - 1) % cc 
-                southeast = (i + 1) % r, j % cc
+                southwest = (i + 1) % r, (j - 1) % c 
+                southeast = (i + 1) % r, j % c
             if not toroidal:
                 # Delete boundary case edges
                 if i == 0:
@@ -393,8 +390,7 @@ def hex_lattice(r, c, toroidal=False):
                     northwest = None
                     west = None
                     southwest = None
-                if ((i % 2) == 0 and j == c - 2) or \
-                  ((i % 2) == 1 and j == c - 1): 
+                if j == c - 1: 
                     # Right edge
                     east = None
                     northeast = None
@@ -408,14 +404,14 @@ def hex_lattice(r, c, toroidal=False):
 
 def maslov_sneppen(graph, num_steps=None):
     r"""
-    Rewire the given undirected or directed graph according to the Maslov and 
+    Rewire the given undirected or directed graph acording to the Maslov and 
     Sneppen method for degree-preserving random rewiring of a complex network, 
     as described on 
     `Maslov's webpage <http://www.cmth.bnl.gov/~maslov/matlab.htm>`_.
     Return the resulting graph.
 
     If a positive integer ``num_steps`` is given, then perform ``num_steps``
-    of the method.
+    number of steps of the method.
     Otherwise perform the default number of steps of the method, namely
     ``4*graph.num_edges()`` steps.
     """
@@ -441,7 +437,7 @@ def maslov_sneppen(graph, num_steps=None):
 def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=2):
     r"""
     Draw all the colorings of the given graph that are listed in ``colorings``.
-    Position the vertices according to the coordinates in ``pos``.
+    Position the vertices acording to the coordinates in ``pos``.
     Label the vertices iff ``vertex_labels== True``.
     Set the size of each graph via ``figsize``.   
     """
