@@ -22,6 +22,7 @@ CHANGELOG:
   to handle biases.
 - AR, 2013-11-25: Added Maslov-Sneppen rewiring and the Moore lattice
   graph generator. 
+- AR, 2013-12-03: Added triangular lattice graph generator.
 
 TODO:
 
