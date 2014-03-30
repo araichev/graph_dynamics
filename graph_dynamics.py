@@ -23,6 +23,7 @@ CHANGELOG:
 - AR, 2013-11-25: Added Maslov-Sneppen rewiring and the Moore lattice
   graph generator. 
 - AR, 2013-12-03: Added triangular lattice graph generator.
+- See the Git log from now on.
 
 TODO:
 
@@ -125,14 +126,21 @@ def majority_rule(graph, coloring):
     """
     G = graph
     new_coloring = dict()
-    # Update the colors of G's vertices and store them in H
+    # Update the colors of G's vertices 
+    if G.is_directed():
+        neighbor_iter = G.neighbor_in_iterator
+    else:
+        neighbor_iter = G.neighbor_iterator
     for x in G.vertex_iterator():
-        # Find majority color of x's neighbors.
+        # Find majority color of x's neighbors/in-neighbors
         nb_color_count = Counter()
-        for y in G.neighbor_iterator(x):
+        for y in neighbor_iter(x):
             color = coloring[y]
             nb_color_count[color] += 1
-        max_color, max_count = nb_color_count.most_common(1)[0]
+        try:
+            max_color, max_count = nb_color_count.most_common(1)[0]
+        except IndexError:
+            max_color, max_count = None, 0
         num_neighbors = sum(nb_color_count.values())
         # Color x the majority color if it exists.
         if max_count > 0.5*num_neighbors:
@@ -147,18 +155,26 @@ def plurality_rule(graph, coloring):
     Update the coloring of the given graph via the plurality rule.
     Under this rule, a vertex x becomes the color that ocurs most
     among its neighbors.
-    If the maximum color frequency is 1, then x does not change color.
+    If the maximum color frequency of x's neighbors is 1, 
+    then x does not change color.
     """
     G = graph
     new_coloring = dict()
-    # Update the colors of G's vertices and store them in H
+    # Update the colors of G's vertices
+    if G.is_directed():
+        neighbor_iter = G.neighbor_in_iterator
+    else:
+        neighbor_iter = G.neighbor_iterator
     for x in G.vertex_iterator():
         # Find plurality color of x's neighbors.
         nb_color_count = Counter()
-        for y in G.neighbor_iterator(x):
+        for y in neighbor_iter(x):
             color = coloring[y]
             nb_color_count[color] += 1
-        max_color, max_count = nb_color_count.most_common(1)[0]
+        try:
+            max_color, max_count = nb_color_count.most_common(1)[0]
+        except IndexError:
+            max_color, max_count = None, 0
         # Color x the plurality color, if it exists.
         if max_count > 1:
             new_coloring[x] = max_color
@@ -195,10 +211,14 @@ def gsl2_rule(graph, coloring, palette=['green', 'yellow'],
     new_coloring = dict()
     green = palette[0]
     yellow = palette[1]
-    # Update the colors of G's vertices.
+    # Update the colors of G's vertices
+    if G.is_directed():
+        neighbor_iter = G.neighbor_in_iterator
+    else:
+        neighbor_iter = G.neighbor_iterator
     for x in G.vertex_iterator():
         nb_color_count = Counter() #{green: 0, yellow: 0}
-        for y in G.neighbor_iterator(x):
+        for y in neighbor_iter(x):
             color = coloring[y]
             if color in {green, yellow}:
                 nb_color_count[color] += 1
@@ -251,11 +271,15 @@ def gsl3_rule(graph, coloring, palette=['green', 'red', 'yellow'],
     green = palette[0]
     red = palette[1]
     yellow = palette[2]
-    # Update the colors of G's vertices.
+    # Update the colors of G's vertices
     new_coloring = dict()
+    if G.is_directed():
+        neighbor_iter = G.neighbor_in_iterator
+    else:
+        neighbor_iter = G.neighbor_iterator
     for x in G.vertex_iterator():
         nb_color_count = Counter() #{green: 0, red: 0, yellow: 0}
-        for y in G.neighbor_iterator(x):
+        for y in neighbor_iter(x):
             color = coloring[y]
             nb_color_count[color] += 1
         num_neighbors = sum(nb_color_count.values())   
@@ -428,7 +452,7 @@ def maslov_sneppen(graph, num_steps=None):
     return G
 
 # Dynamics functions --------------------------------------------------------- 
-def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=2):
+def show_colorings(graph, colorings, pos=None, vertex_labels=False, figsize=3):
     r"""
     Draw all the colorings of the given graph that are listed in ``colorings``.
     Position the vertices acording to the coordinates in ``pos``.
@@ -534,7 +558,7 @@ def run_rule_many_times(update_rule, update_rule_kwargs,
         print('Mean initial color counts:')
         for color, mean in sorted(mean_initial_color_count.items()):
             print('    {!s}: {:.3g}'.format(color, mean))
-        print('Mean finial color counts:')
+        print('Mean final color counts:')
         for color, mean in sorted(mean_final_color_count.items()):
             print('    {!s}: {:.3g}'.format(color, mean))
         
