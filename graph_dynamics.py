@@ -35,13 +35,6 @@ TODO:
 - Add unit tests (as a separate file).
 
 """
-#*****************************************************************************
-#       Copyright (C) 2013 Alexander Raichev <alex.raichev@gmail.com>
-#
-#  Distributed under the terms of the GNU Lesser General Public License (LGPL)
-#                  http://www.gnu.org/licenses/
-#*****************************************************************************
-
 from __future__ import division, print_function
 from collections import Counter
         
@@ -60,7 +53,7 @@ def invert_dict(coloring):
     Sage's show() command requires colorings in this format.
     """
     d = dict()
-    for x in coloring.keys():
+    for x in coloring:
         color = coloring[x] 
         d[color] = d.get(color, set())
         d[color].add(x)
@@ -113,7 +106,7 @@ def color_randomly(graph, bias):
         cutoffs.append((cut, color))
 
     coloring = dict()
-    for v in graph.vertices():
+    for v in graph.vertex_iterator():
         x = uniform(0, 1)
         for cut, color in cutoffs:
             if x <= cut:
@@ -133,10 +126,10 @@ def majority_rule(graph, coloring):
     G = graph
     new_coloring = dict()
     # Update the colors of G's vertices and store them in H
-    for x in G.vertices():
+    for x in G.vertex_iterator():
         # Find majority color of x's neighbors.
         nb_color_count = Counter()
-        for y in G.neighbors(x):
+        for y in G.neighbor_iterator(x):
             color = coloring[y]
             nb_color_count[color] += 1
         max_color, max_count = nb_color_count.most_common(1)[0]
@@ -159,10 +152,10 @@ def plurality_rule(graph, coloring):
     G = graph
     new_coloring = dict()
     # Update the colors of G's vertices and store them in H
-    for x in G.vertices():
+    for x in G.vertex_iterator():
         # Find plurality color of x's neighbors.
         nb_color_count = Counter()
-        for y in G.neighbors(x):
+        for y in G.neighbor_iterator(x):
             color = coloring[y]
             nb_color_count[color] += 1
         max_color, max_count = nb_color_count.most_common(1)[0]
@@ -203,9 +196,9 @@ def gsl2_rule(graph, coloring, palette=['green', 'yellow'],
     green = palette[0]
     yellow = palette[1]
     # Update the colors of G's vertices.
-    for x in G.vertices():
+    for x in G.vertex_iterator():
         nb_color_count = Counter() #{green: 0, yellow: 0}
-        for y in G.neighbors(x):
+        for y in G.neighbor_iterator(x):
             color = coloring[y]
             if color in {green, yellow}:
                 nb_color_count[color] += 1
@@ -260,9 +253,9 @@ def gsl3_rule(graph, coloring, palette=['green', 'red', 'yellow'],
     yellow = palette[2]
     # Update the colors of G's vertices.
     new_coloring = dict()
-    for x in G.vertices():
+    for x in G.vertex_iterator():
         nb_color_count = Counter() #{green: 0, red: 0, yellow: 0}
-        for y in G.neighbors(x):
+        for y in G.neighbor_iterator(x):
             color = coloring[y]
             nb_color_count[color] += 1
         num_neighbors = sum(nb_color_count.values())   
@@ -337,7 +330,7 @@ def moore_lattice(r, c, toroidal=False):
               southwest, south, southeast]
             edges = [(v, x) for x in neighbors if x is not None]
             G.add_edges(edges)
-    G.set_pos({v: (v[1], -v[0]) for v in G.vertices()})
+    G.set_pos({v: (v[1], -v[0]) for v in G.vertex_iterator()})
     return G
 
 def triangular_lattice(r, c, toroidal=False):
@@ -400,7 +393,7 @@ def triangular_lattice(r, c, toroidal=False):
               west, southwest, southeast]
             edges = [(v, x) for x in neighbors if x is not None]
             G.add_edges(edges)
-    G.set_pos({v: (v[1], -v[0]) for v in G.vertices()})
+    G.set_pos({v: (v[1], -v[0]) for v in G.vertex_iterator()})
     return G
 
 def maslov_sneppen(graph, num_steps=None):
